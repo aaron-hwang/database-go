@@ -147,7 +147,7 @@ func nodeAppendKeyVal(next BNode, destination uint16, ptr uint64, key []byte, va
 }
 
 // Update the given new leaf to
-func updateLeaf(next, old BNode, index uint16, key, val []byte) {
+func leafUpdate(next, old BNode, index uint16, key, val []byte) {
 	next.setHeader(LEAF, old.nkeys())
 	nodeAppendAcrossRange(next, old, 0, 0, index)
 	nodeAppendKeyVal(next, index, 0, key, val)
