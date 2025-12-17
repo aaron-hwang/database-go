@@ -31,6 +31,9 @@ func treeInsert(tree *BTree, node BNode, key, val []byte) BNode {
 		kptr, _ := node.getPtr(index)
 		knode := treeInsert(tree, tree.get(kptr), key, val)
 		// After we insert, split
-
+		numsplits, splitNodes := nodeSplit3(knode)
+		tree.del(kptr)
+		nodeReplaceKidN(tree, next, node, index, splitNodes[:numsplits])
 	}
+	return next
 }

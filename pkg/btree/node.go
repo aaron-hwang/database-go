@@ -177,7 +177,12 @@ func nodeLookupLE(node BNode, key []byte) uint16 {
 	return i - 1
 }
 
-// Split a node's keys in half. For writing to disk, make sure a node still fits in one page. Split them among left and right respectively.
+/*
+	Split a node's keys in half. For writing to disk, make sure a node still fits in one page.
+
+Split them among left and right respectively.
+N.B: This can mutate left and right.
+*/
 func nodeSplitInHalf(left, right, old BNode) error {
 	nkeys := old.nkeys()
 	if nkeys < 2 {
@@ -221,4 +226,46 @@ func nodeSplitInHalf(left, right, old BNode) error {
 	nodeAppendAcrossRange(right, old, 0, 0, numRight)
 
 	return nil
+}
+
+/*
+Split a BTree node if it is too large. The result should be between 1 and 3 nodes.
+Returns:
+
+	The number of nodes created from the split.
+	A slice containing said created nodes.
+*/
+func nodeSplit3(old BNode) (uint16, [3]BNode) {
+	if old.nbytes() <= BTREE_PAGE_SIZE_BYTES {
+		old = old[:BTREE_PAGE_SIZE_BYTES]
+		return 1, [3]BNode{old}
+	}
+
+	// We allocate 2*BTREE_PAGE_SIZE_BYTES because left might need to get split
+	left := BNode(make([]byte, 2*BTREE_PAGE_SIZE_BYTES))
+	right := BNode(make([]byte, BTREE_PAGE_SIZE_BYTES))
+	nodeSplitInHalf(left, right, old)
+	// If left is big enough to fit into ine page, we can just move on with our life.
+	if left.nbytes() <= BTREE_PAGE_SIZE_BYTES {
+		left = left[:BTREE_PAGE_SIZE_BYTES]
+		return 2, [3]BNode{left, right}
+	}
+
+	// Otherwise, we need to split again....
+	leftmost := BNode(make([]byte, BTREE_PAGE_SIZE_BYTES))
+	middle := BNode(make([]byte, BTREE_PAGE_SIZE_BYTES))
+	nodeSplitInHalf(leftmost, middle, left)
+	// TODO: Error if leftmost still does not fit in a page somehow (Should be impossible)
+	return 3, [3]BNode{leftmost, middle, right}
+}
+
+func nodeReplaceKidN(tree *BTree, new, old BNode, index uint16, kids []BNode) {
+	increment := uint16(len(kids))
+	new.setHeader(NODE, old.nkeys()+increment-1)
+	nodeAppendAcrossRange(new, old, 0, 0, index)
+	for i, node := range kids {
+		key, _ := node.getKey(0)
+		nodeAppendKeyVal(new, index+uint16(i), tree.create(node), key, nil)
+	}
+	nodeAppendAcrossRange(new, old, index+increment, index+1, old.nkeys()-(index+1))
 }
