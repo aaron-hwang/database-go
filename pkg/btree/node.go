@@ -269,3 +269,13 @@ func nodeReplaceKidN(tree *BTree, new, old BNode, index uint16, kids []BNode) {
 	}
 	nodeAppendAcrossRange(new, old, index+increment, index+1, old.nkeys()-(index+1))
 }
+
+// Remove a given key from a leaf node
+func leafDelete(new BNode, old BNode, index uint16)
+
+// Merge 'left' and 'right' into 'new'
+func nodeMerge(new, left, right BNode)
+
+func nodeReplace2Kids(new, old BNode, index uint16, ptr uint64, key []byte) {
+
+}
